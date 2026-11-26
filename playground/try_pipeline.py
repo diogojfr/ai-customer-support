@@ -6,6 +6,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.ai.decide import decide
 
-question = "Which paddle board should I get? I weigh 90 kg."
+question = "Panel 4 of my HP-S3 is cracked. Order 112-4839201-5528341."
 decision = decide(question)
 print(decision.model_dump_json(indent=2))
