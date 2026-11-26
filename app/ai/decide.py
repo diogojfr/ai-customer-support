@@ -1,7 +1,13 @@
+import logging
+
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
 from app.ai.agent import write_reply
 from app.ai.classifier import classify
 from app.ai.rules import CUSTOMER_STEPS, resolve_issue
 from app.ai.schemas import Decision
+
+logger = logging.getLogger(__name__)
 
 
 def decide(thread: str, has_attachments: bool = False) -> Decision:
@@ -22,10 +28,16 @@ def decide(thread: str, has_attachments: bool = False) -> Decision:
     if classification.needs_human:
         return escalate(classification.reason)
 
-    answer = write_reply(thread, classification.section)
+    try:
+        answer = write_reply(thread, classification.section)
+    except UnexpectedModelBehavior as error:
+        # The model kept returning empty or invalid output. The classifier already wrote the
+        # acknowledgement, so a colleague takes over instead of the email failing.
+        logger.warning("Agent gave no valid reply: %s", error)
+        return escalate("The agent could not write a valid reply")
     if answer.action == "escalate":
         return escalate(answer.reasoning)
-    if not answer.enough_information:
+    if not answer.knowledge_base_covers_it:
         return escalate("The knowledge base does not answer this")
     if answer.issue:
         step = resolve_issue(answer.issue)

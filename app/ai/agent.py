@@ -4,6 +4,7 @@ import re
 from pydantic_ai import Agent, ModelRetry, RunContext
 
 from app import db
+from app.ai.retry import run_with_retry
 from app.ai.schemas import AgentReply
 from app.config import settings
 
@@ -16,9 +17,12 @@ You write the answer to the latest customer message in the email thread.
 Steps:
 1. The prompt already contains the "brand-and-tone" and "escalation-rules" sections,
    and the section the classifier picked. Do not fetch those again.
-2. Call get_section only if you need another section. Call list_sections to see the options.
-3. Answer only with facts from those sections. If they do not answer the question,
-   set enough_information to false.
+2. The classifier can pick the wrong section. If the preloaded sections do not answer the
+   question but another section might, for example a product's section for a problem with
+   that product, call get_section for it. Call list_sections to see the options.
+3. Answer only with facts from those sections. Set knowledge_base_covers_it to false only after
+   you checked every section that could answer the question. Details the customer left out
+   are not missing information: asking for them is a complete answer.
 4. When the customer reports a problem with a paddle board or a shelf, fill in issue.
    Ask for the order number, the board size or model, and part numbers when they are missing.
    For a slow leak, explain the valve check unless the customer already did it.
@@ -81,4 +85,4 @@ def write_reply(thread: str, section: str) -> AgentReply:
         f"Knowledge base sections:\n{sections}\n\n"
         f"Email thread:\n{thread}"
     )
-    return support_agent.run_sync(prompt).output
+    return run_with_retry(support_agent, prompt).output

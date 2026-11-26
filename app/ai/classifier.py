@@ -1,5 +1,6 @@
 from pydantic_ai import Agent
 
+from app.ai.retry import run_with_retry
 from app.ai.schemas import Classification
 from app.config import settings
 
@@ -10,9 +11,19 @@ Read the email thread and classify the latest customer message.
 Sections:
 - paddle-boards: inflatable paddle boards, sizes, inflation, leaks, fins, pumps, paddles, leashes
 - shelving: flat-pack bookcases and cube units, assembly, panels, hardware, finishes
-- returns-and-warranty: returns, refunds, and warranty for any product
-- shipping: delivery, tracking, and shipping of replacement parts
+- returns-and-warranty: returns, refunds, and warranty terms for any product
+- shipping: Amazon delivery and tracking of an order, and delivery times of replacement parts
 - other: anything else
+
+How to pick the section:
+- A problem with a paddle board or a shelf goes to that product's section: missing or damaged
+  parts, accessories, or hardware, leaks, split seams, a wrong model or finish. That section
+  explains what happens next, even when the fix is to send a part.
+- Use returns-and-warranty when the customer wants to send a product back, wants money back,
+  or asks what the warranty covers.
+- Use shipping when the question is about delivery itself: where an order is, when it arrives,
+  or how long a replacement part takes. Not when a part is missing from the box.
+- When the customer asks for a person or a call about a product, use that product's section.
 
 Set needs_human to true when the customer:
 - is angry, threatens a bad review, or uses abusive language
@@ -34,4 +45,4 @@ classifier = Agent(
 
 
 def classify(thread: str) -> Classification:
-    return classifier.run_sync(thread).output
+    return run_with_retry(classifier, thread).output
